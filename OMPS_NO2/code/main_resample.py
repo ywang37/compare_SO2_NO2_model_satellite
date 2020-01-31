@@ -8,6 +8,7 @@ import datetime
 import glob
 import numpy as np
 
+from mylib.amf.amf import shape_factor_correction_factor
 from mylib.conversion import vmr_to_DU
 from mylib.gc_io.read_nd49 import read_nd49_resample
 from mylib.pro_omps_no2_l2.io_omps_no2_l2 import read_OMPS_NO2_L2
@@ -61,8 +62,13 @@ sat_aprior_varname_list = [
         '/aPriori/nlyrs',
         ]
 
+# correction for VCD
+correction_flag = True
 
 verbose = True
+
+flag_2D = True
+flag_1D = True
 
 #
 # End user parameters
@@ -172,6 +178,58 @@ while currDate_D <= endDate_D:
                 sat_model_sample(mod_coord_dict, mod_TAI93, mod_var_dict,
                 sat_lat, sat_lon, sat_TAI93, sat_obs_dict,
                 sat_flag=sat_flag)
+
+        if correction_flag:
+
+            if flag_2D:
+
+                # get resampled data
+                mod_grid_dict = sat_mod_dict['mod_grid_dict']
+                sat_grid_dict = sat_mod_dict['sat_grid_dict']
+
+                # prepare data for correction
+                layer_val_2D      = mod_grid_dict['NO2']
+                press_edge_2D     = mod_grid_dict['PEdge_Bot']
+                new_press_edge_2D = sat_grid_dict['PressureLevel']
+                AK_2D             = sat_grid_dict['AveragingKernel']
+                S_aprior_2D       = sat_grid_dict['TROPO_NO2_ShapeFactor']
+                flag              = (sat_mod_dict['count'] > 0)
+
+                # correct VCD
+                correction_2D_satp = shape_factor_correction_factor(
+                        layer_val_2D, press_edge_2D, 
+                        new_press_edge_2D, AK_2D, 
+                        S_aprior_2D, flag=flag)
+
+                # add data to sat_mod_dict through
+                # mod_grid_dict and sat_grid_dict
+                sat_grid_dict['corrn_factor'] = \
+                        correction_2D_satp['corrn_factor']
+
+            if flag_1D:
+
+                # get resampled data
+                mod_1D_dict = sat_mod_dict['mod_1D_dict']
+                sat_1D_dict = sat_mod_dict['sat_1D_dict']
+
+                # prepare data for correction
+                layer_val_1D      = mod_1D_dict['NO2']
+                press_edge_1D     = mod_1D_dict['PEdge_Bot']
+                new_press_edge_1D = sat_1D_dict['PressureLevel']
+                AK_1D             = sat_1D_dict['AveragingKernel']
+                S_aprior_1D       = sat_1D_dict['TROPO_NO2_ShapeFactor']
+                flag              = None
+
+                # correct VCD
+                correction_1D_satp = shape_factor_correction_factor(
+                        layer_val_1D, press_edge_1D, 
+                        new_press_edge_1D, AK_1D, 
+                        S_aprior_1D, flag=flag)
+
+                # add data to sat_mod_dict through
+                # mod_1D_dict and sat_1D_dict
+                sat_1D_dict['corrn_factor'] = \
+                        correction_1D_satp['corrn_factor']
 
         # save data
         lon, lat = np.meshgrid(model_data['longitude'], model_data['latitude'])
