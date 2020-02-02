@@ -31,8 +31,8 @@ gc_trop_file = gc_root_dir + 'ctm.bpch'
 
 gc_nd49_dir = gc_root_dir + 'ND49.1/'
 
-startDate = '2013-10-08'
-endDate   = '2013-10-08'
+startDate = '2013-10-01'
+endDate   = '2013-10-31'
 
 # species names
 mod_spename = 'TIME-SER_NO2'
@@ -130,9 +130,10 @@ while currDate_D <= endDate_D:
 
     # process satellite files
     print('Process satellites on ' + currDate)
-    #for i in range(len(all_sat_files)):
+    for i in range(len(all_sat_files)):
+    #for i in [4]:
     #for i in [3]:
-    for i in [2,3]:
+    #for i in [2,3]:
 
         # read satellite file
         sat_file = all_sat_files[i]
@@ -178,8 +179,8 @@ while currDate_D <= endDate_D:
                 sat_model_sample(mod_coord_dict, mod_TAI93, mod_var_dict,
                 sat_lat, sat_lon, sat_TAI93, sat_obs_dict,
                 sat_flag=sat_flag)
-
-        if correction_flag:
+        if ( correction_flag and 
+                (sat_mod_dict['mod_1D_dict']['NO2'].size > 0) ):
 
             if flag_2D:
 
@@ -206,6 +207,11 @@ while currDate_D <= endDate_D:
                 sat_grid_dict['corrn_factor'] = \
                         correction_2D_satp['corrn_factor']
 
+                # apply correction factor to satllite VCD
+                sat_grid_dict['ColumnAmountNO2tropo_correction'] = \
+                        sat_grid_dict['ColumnAmountNO2tropo'] \
+                        * sat_grid_dict['corrn_factor']
+
             if flag_1D:
 
                 # get resampled data
@@ -231,19 +237,25 @@ while currDate_D <= endDate_D:
                 sat_1D_dict['corrn_factor'] = \
                         correction_1D_satp['corrn_factor']
 
-        # save data
-        lon, lat = np.meshgrid(model_data['longitude'], model_data['latitude'])
-        sat_mod_dict['Latitude']  = lat
-        sat_mod_dict['Longitude'] = lon
-        lon_e, lat_e = \
-                np.meshgrid(model_data['longitude_e'],
-                        model_data['latitude_e'])
-        sat_mod_dict['Latitude_e']   = lat_e
-        sat_mod_dict['Longitude_e']  = lon_e
-        out_file = out_dir + 'model_satellite_' + \
-                sat_file.split('/')[-1][18:34] + '.nc'
-        save_sat_model_sample(out_file, sat_mod_dict)
+                # apply correction factor to satllite VCD
+                sat_1D_dict['ColumnAmountNO2tropo_correction'] = \
+                        sat_1D_dict['ColumnAmountNO2tropo'] \
+                        * sat_1D_dict['corrn_factor']
 
+        # save data
+        if ( sat_mod_dict['mod_1D_dict']['NO2'].size > 0 ):
+            lon, lat = np.meshgrid(model_data['longitude'], 
+                    model_data['latitude'])
+            sat_mod_dict['Latitude']  = lat
+            sat_mod_dict['Longitude'] = lon
+            lon_e, lat_e = \
+                    np.meshgrid(model_data['longitude_e'],
+                            model_data['latitude_e'])
+            sat_mod_dict['Latitude_e']   = lat_e
+            sat_mod_dict['Longitude_e']  = lon_e
+            out_file = out_dir + 'model_satellite_' + \
+                    sat_file.split('/')[-1][18:34] + '.nc'
+            save_sat_model_sample(out_file, sat_mod_dict)
 
     # go to next day
     currDate_D = currDate_D + datetime.timedelta(days=1)
