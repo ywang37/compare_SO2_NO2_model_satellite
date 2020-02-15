@@ -121,7 +121,7 @@ while currDate_D <= endDate_D:
             out_dict[varname] = in_count_sum
 
     # output data
-    if (out_dict['count'] != 0):
+    if (np.sum(out_dict['count']) > 0):
         out_filename = daily_dir + 'model_satellite_' + \
                 currDate + '.nc'
         save_ave(out_filename, out_dict)
